@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: outfitai
+  profiles:
+    # Used only when no profile is set explicitly (SPRING_PROFILES_ACTIVE or --spring.profiles.active)
+    default: h2
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate only checks that entities match it.
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

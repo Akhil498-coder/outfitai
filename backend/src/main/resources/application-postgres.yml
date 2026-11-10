@@ -1,0 +1,6 @@
+# Postgres profile: connection details come only from environment variables.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
