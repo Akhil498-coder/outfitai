@@ -1,6 +1,9 @@
 spring:
   application:
     name: outfitai
+  autoconfigure:
+    # We authenticate with JWTs, so skip Spring's default in-memory user + generated password.
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   profiles:
     # Used only when no profile is set explicitly (SPRING_PROFILES_ACTIVE or --spring.profiles.active)
     default: h2
@@ -17,3 +20,10 @@ management:
     web:
       exposure:
         include: health
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}          # required, at least 32 characters
+    expiration: PT24H              # ISO-8601 duration: 24 hours
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}

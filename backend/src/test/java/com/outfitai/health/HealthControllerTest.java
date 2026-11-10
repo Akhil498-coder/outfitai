@@ -5,15 +5,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.outfitai.auth.JwtService;
+import com.outfitai.config.SecurityConfig;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /** Web-layer slice test: only the controller is loaded, the service is mocked. */
 @WebMvcTest(HealthController.class)
+@Import(SecurityConfig.class) // the slice skips @Configuration classes, so bring our security rules in
 class HealthControllerTest {
 
     @Autowired
@@ -21,6 +25,9 @@ class HealthControllerTest {
 
     @MockitoBean
     private HealthService healthService;
+
+    @MockitoBean
+    private JwtService jwtService; // needed by SecurityConfig's filter
 
     @Test
     void returnsHealthJson() throws Exception {
