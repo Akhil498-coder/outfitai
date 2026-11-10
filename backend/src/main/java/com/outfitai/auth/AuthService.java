@@ -20,13 +20,16 @@ public class AuthService {
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final GoogleTokenVerifier googleVerifier;
     /** Compared against when the email is unknown, so "no such user" takes as long as "wrong password". */
     private final String dummyHash;
 
-    public AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
+                       GoogleTokenVerifier googleVerifier) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.googleVerifier = googleVerifier;
         this.dummyHash = passwordEncoder.encode("dummy-password-for-timing");
     }
 
@@ -59,6 +62,31 @@ public class AuthService {
             throw new ApiException(HttpStatus.UNAUTHORIZED, BAD_CREDENTIALS);
         }
         return respond(user);
+    }
+
+    /** Sign in (or first-time sign up) with a Google ID token obtained by the frontend. */
+    public AuthResponse googleLogin(GoogleLoginRequest req) {
+        GoogleIdentity identity = googleVerifier.verify(req.idToken())
+                .filter(GoogleIdentity::emailVerified)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid Google token"));
+
+        // Returning Google user: matched by Google's stable id, not by email.
+        User byGoogleId = users.findByGoogleSub(identity.subject()).orElse(null);
+        if (byGoogleId != null) {
+            return respond(byGoogleId);
+        }
+        String email = normalize(identity.email());
+        if (users.existsByEmail(email)) { // accounts stay separate, so never merge into a password account
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "This email is registered with a password. Log in with email and password.");
+        }
+        String name = (identity.name() == null || identity.name().isBlank())
+                ? email.substring(0, email.indexOf('@')) : identity.name().trim();
+        try {
+            return respond(users.saveAndFlush(User.google(email, identity.subject(), name)));
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "Email is already registered");
+        }
     }
 
     AuthResponse respond(User user) {
